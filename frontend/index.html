@@ -4,87 +4,73 @@
   <meta charset="UTF-8" />
   <title>🦆 AI Rubber Ducky Debugger</title>
   <style>
-  body {
-    font-family: 'Segoe UI', sans-serif;
-    background-color: #121212;
-    color: #f0f0f0;
-    padding: 2rem;
-    max-width: 700px;
-    margin: auto;
-  }
-
-  h1 {
-    color: #ffdd57;
-    margin-bottom: 0.5rem;
-  }
-
- select,
-textarea,
-button {
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px;
-  margin-top: 10px;
-  font-size: 1rem;
-  border-radius: 6px;
-  border: 1px solid #444;
-  background-color: #1e1e1e;
-  color: #f0f0f0;
-}
-
-
-
-
-  button {
-    background: #ffdd57;
-    color: #222;
-    font-weight: bold;
-    border: none;
-    cursor: pointer;
-    transition: background 0.2s ease;
-  }
-
-  button:hover {
-    background: #ffe170;
-  }
-
-  .chat-box {
-    margin-top: 2rem;
-    max-height: 400px;
-    overflow-y: auto;
-    background: #1e1e1e;
-    padding: 1rem;
-    border-radius: 8px;
-    border: 1px solid #333;
-  }
-
-  .chat-msg {
-    margin-bottom: 1rem;
-  }
-
-  .user-msg {
-    color: #ffdd57;
-    font-weight: bold;
-  }
-
-  .duck-msg {
-    margin-left: 1rem;
-    color: #f0f0f0;
-  }
-  pre {
-  background-color: #1e1e1e;
-  color: #dcdcdc;
-  padding: 10px;
-  border-radius: 6px;
-  overflow-x: auto;
-  font-size: 0.95rem;
-  line-height: 1.4;
-  }
-  code {
-  font-family: monospace;
-  }
-
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #121212;
+      color: #f0f0f0;
+      padding: 2rem;
+      max-width: 700px;
+      margin: auto;
+    }
+    h1 {
+      color: #ffdd57;
+      margin-bottom: 0.5rem;
+    }
+    select, textarea, button {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background-color: #1e1e1e;
+      color: #f0f0f0;
+    }
+    button {
+      background: #ffdd57;
+      color: #222;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    button:hover {
+      background: #ffe170;
+    }
+    .chat-box {
+      margin-top: 2rem;
+      max-height: 400px;
+      overflow-y: auto;
+      background: #1e1e1e;
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+    .chat-msg {
+      margin-bottom: 1rem;
+    }
+    .user-msg {
+      color: #ffdd57;
+      font-weight: bold;
+    }
+    .duck-msg {
+      margin-left: 1rem;
+      color: #f0f0f0;
+    }
+    pre {
+      background-color: #1e1e1e;
+      color: #dcdcdc;
+      padding: 10px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+    code {
+      font-family: monospace;
+    }
   </style>
 </head>
 <body>
@@ -102,105 +88,106 @@ button {
   <div id="chat" class="chat-box"></div>
 
   <script>
-  let history = [];
+    let history = [];
 
-  function escapeHTML(str) {
-    return str.replace(/&/g, "&amp;")
-              .replace(/</g, "&lt;")
-              .replace(/>/g, "&gt;");
-  }
+    function escapeHTML(str) {
+      return str.replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+    }
 
-  function formatDuckReply(text) {
-    // Simple Markdown-style code block support
-    const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
+    function formatDuckReply(text) {
+      const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
+      const formatted = text.replace(codeBlockRegex, (_, lang, code) => {
+        const escaped = escapeHTML(code.trim());
+        return `<pre><code class="language-${lang}">${escaped}</code></pre>`;
+      });
+      return "Ducky: " + formatted.replace(/\n/g, "<br>");
+    }
 
-    // Convert code blocks to <pre><code>
-    const formatted = text.replace(codeBlockRegex, (_, lang, code) => {
-      const escaped = escapeHTML(code.trim());
-      return `<pre><code class="language-${lang}">${escaped}</code></pre>`;
-    });
+    async function talkToDucky() {
+      const msg = document.getElementById('message').value.trim();
+      const mode = document.getElementById('mode').value;
+      const chat = document.getElementById('chat');
 
-    // Convert newlines to <br> for non-code parts
-    return "Ducky: " + formatted.replace(/\n/g, "<br>");
-  }
+      if (!msg) return;
 
-  async function talkToDucky() {
-    const msg = document.getElementById('message').value.trim();
-    const mode = document.getElementById('mode').value;
-    const chat = document.getElementById('chat');
+      const userMsg = document.createElement("div");
+      userMsg.className = "chat-msg user-msg";
+      userMsg.textContent = "You: " + msg;
+      chat.appendChild(userMsg);
 
-    if (!msg) return;
+      try {
+        const response = await fetch("/talk", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            message: msg,
+            mode: mode,
+            history: history
+          })
+        });
 
-    const userMsg = document.createElement("div");
-    userMsg.className = "chat-msg user-msg";
-    userMsg.textContent = "You: " + msg;
-    chat.appendChild(userMsg);
+        const data = await response.json();
 
-    const response = await fetch("/talk", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: msg,
-        mode: mode,
-        history: history
-      })
-    });
+        const duckMsg = document.createElement("div");
+        duckMsg.className = "chat-msg duck-msg";
+        duckMsg.innerHTML = formatDuckReply(data.reply);
+        chat.appendChild(duckMsg);
 
-    const data = await response.json();
+        history = data.history;
+        document.getElementById('message').value = "";
+        chat.scrollTop = chat.scrollHeight;
+      } catch (error) {
+        console.error("Error:", error);
+        const errMsg = document.createElement("div");
+        errMsg.className = "chat-msg duck-msg";
+        errMsg.textContent = "🧨 Ducky hit a backend error.";
+        chat.appendChild(errMsg);
+      }
+    }
 
-    const duckMsg = document.createElement("div");
-    duckMsg.className = "chat-msg duck-msg";
-    duckMsg.innerHTML = formatDuckReply(data.reply);
-    chat.appendChild(duckMsg);
+    const talkBtn = document.getElementById("talkBtn");
+    let recognition;
 
-    history = data.history;
-    document.getElementById('message').value = "";
-    chat.scrollTop = chat.scrollHeight;
-  }
+    if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  const talkBtn = document.getElementById("talkBtn");
-  let recognition;
+      recognition = new SpeechRecognition();
+      recognition.lang = "en-US";
+      recognition.interimResults = false;
+      recognition.continuous = false;
 
-  if ("webkitSpeechRecognition" in window || "SpeechRecognition" in window) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById("message").value = transcript;
+        talkToDucky();
+      };
 
-    recognition = new SpeechRecognition();
-    recognition.lang = "en-US";
-    recognition.interimResults = false;
-    recognition.continuous = false;
+      recognition.onerror = (event) => {
+        console.error("Speech error:", event.error);
+      };
 
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      document.getElementById("message").value = transcript;
-      talkToDucky();
-    };
+      recognition.onend = () => {
+        document.getElementById("message").placeholder = "Explain your problem here...";
+      };
 
-    recognition.onerror = (event) => {
-      console.error("Speech error:", event.error);
-    };
+      talkBtn.addEventListener("mousedown", () => {
+        recognition.start();
+        document.getElementById("message").placeholder = "🎤 Listening...";
+      });
 
-    recognition.onend = () => {
-      document.getElementById("message").placeholder = "Explain your problem here...";
-    };
+      talkBtn.addEventListener("mouseup", () => {
+        recognition.stop();
+      });
 
-    talkBtn.addEventListener("mousedown", () => {
-      recognition.start();
-      document.getElementById("message").placeholder = "🎤 Listening...";
-    });
-
-    talkBtn.addEventListener("mouseup", () => {
-      recognition.stop();
-    });
-
-    talkBtn.addEventListener("mouseleave", () => {
-      recognition.stop();
-    });
-  } else {
-    talkBtn.disabled = true;
-    talkBtn.textContent = "🎤 Voice not supported";
-  }
-
+      talkBtn.addEventListener("mouseleave", () => {
+        recognition.stop();
+      });
+    } else {
+      talkBtn.disabled = true;
+      talkBtn.textContent = "🎤 Voice not supported";
+    }
   </script>
-
 </body>
 </html>
