@@ -12,10 +12,12 @@
       max-width: 700px;
       margin: auto;
     }
+
     h1 {
       color: #ffdd57;
-      margin-bottom: 0.5rem;
+      margin-bottom: 1rem;
     }
+
     select, textarea, button {
       display: block;
       width: 100%;
@@ -28,6 +30,7 @@
       background-color: #1e1e1e;
       color: #f0f0f0;
     }
+
     button {
       background: #ffdd57;
       color: #222;
@@ -36,9 +39,17 @@
       cursor: pointer;
       transition: background 0.2s ease;
     }
+
     button:hover {
       background: #ffe170;
     }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
     .chat-box {
       margin-top: 2rem;
       max-height: 400px;
@@ -48,17 +59,21 @@
       border-radius: 8px;
       border: 1px solid #333;
     }
+
     .chat-msg {
       margin-bottom: 1rem;
     }
+
     .user-msg {
       color: #ffdd57;
       font-weight: bold;
     }
+
     .duck-msg {
       margin-left: 1rem;
       color: #f0f0f0;
     }
+
     pre {
       background-color: #1e1e1e;
       color: #dcdcdc;
@@ -68,6 +83,7 @@
       font-size: 0.95rem;
       line-height: 1.4;
     }
+
     code {
       font-family: monospace;
     }
@@ -82,8 +98,14 @@
   </select>
 
   <textarea id="message" placeholder="Explain your problem here..."></textarea>
-  <button id="talkBtn">🎤 Hold to Talk</button>
-  <button onclick="talkToDucky()">Quack 🦆</button>
+
+  <div class="button-row">
+    <button onclick="talkToDucky()">Send to Ducky</button>
+  </div>
+
+  <div class="button-row">
+    <button id="talkBtn">🎤 Hold to Talk</button>
+  </div>
 
   <div id="chat" class="chat-box"></div>
 
@@ -117,36 +139,33 @@
       userMsg.textContent = "You: " + msg;
       chat.appendChild(userMsg);
 
+      // Add typing indicator
+      const thinkingMsg = document.createElement("div");
+      thinkingMsg.className = "chat-msg duck-msg";
+      thinkingMsg.textContent = "🦆 Ducky is thinking...";
+      chat.appendChild(thinkingMsg);
+      chat.scrollTop = chat.scrollHeight;
+
       try {
         const response = await fetch("/talk", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: msg,
-            mode: mode,
-            history: history
-          })
+          body: JSON.stringify({ message: msg, mode: mode, history: history })
         });
 
         const data = await response.json();
 
-        const duckMsg = document.createElement("div");
-        duckMsg.className = "chat-msg duck-msg";
-        duckMsg.innerHTML = formatDuckReply(data.reply);
-        chat.appendChild(duckMsg);
-
+        // Replace thinking message with actual reply
+        thinkingMsg.innerHTML = formatDuckReply(data.reply);
         history = data.history;
-        document.getElementById('message').value = "";
-        chat.scrollTop = chat.scrollHeight;
       } catch (error) {
         console.error("Error:", error);
-        const errMsg = document.createElement("div");
-        errMsg.className = "chat-msg duck-msg";
-        errMsg.textContent = "🧨 Ducky hit a backend error.";
-        chat.appendChild(errMsg);
+        thinkingMsg.textContent = "🧨 Ducky hit a backend error.";
       }
-    }
 
+      document.getElementById('message').value = "";
+      chat.scrollTop = chat.scrollHeight;
+    }
     const talkBtn = document.getElementById("talkBtn");
     let recognition;
 
