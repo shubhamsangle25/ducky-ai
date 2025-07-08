@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🦆 AI Rubber Ducky Debugger</title>
+  <style>
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #121212;
+    color: #f0f0f0;
+    padding: 2rem;
+    max-width: 700px;
+    margin: auto;
+  }
+
+  h1 {
+    color: #ffdd57;
+    margin-bottom: 0.5rem;
+  }
+
+ select,
+textarea,
+button {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px;
+  margin-top: 10px;
+  font-size: 1rem;
+  border-radius: 6px;
+  border: 1px solid #444;
+  background-color: #1e1e1e;
+  color: #f0f0f0;
+}
+
+
+
+
+  button {
+    background: #ffdd57;
+    color: #222;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  button:hover {
+    background: #ffe170;
+  }
+
+  .chat-box {
+    margin-top: 2rem;
+    max-height: 400px;
+    overflow-y: auto;
+    background: #1e1e1e;
+    padding: 1rem;
+    border-radius: 8px;
+    border: 1px solid #333;
+  }
+
+  .chat-msg {
+    margin-bottom: 1rem;
+  }
+
+  .user-msg {
+    color: #ffdd57;
+    font-weight: bold;
+  }
+
+  .duck-msg {
+    margin-left: 1rem;
+    color: #f0f0f0;
+  }
+  pre {
+  background-color: #1e1e1e;
+  color: #dcdcdc;
+  padding: 10px;
+  border-radius: 6px;
+  overflow-x: auto;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  }
+  code {
+  font-family: monospace;
+  }
+
+  </style>
+</head>
+<body>
+  <h1>🦆 Talk to Your AI Ducky</h1>
+
+  <select id="mode">
+    <option value="thinker">Thinker</option>
+    <option value="debug">Debug</option>
+    <option value="silent">Silent</option>
+    <option value="helper">Helper</option>
+  </select>
+
+  <textarea id="message" placeholder="Explain your problem here..."></textarea>
+  <button onclick="startVoiceInput()">🎤 Talk to Ducky</button>
+  <button onclick="talkToDucky()">Quack 🦆</button>
+
+  <div id="chat" class="chat-box"></div>
+
+  <script>
+  function startVoiceInput() {
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.continuous = false; // We'll keep it simple for now
+
+  document.getElementById("message").placeholder = "🎤 Listening... Speak clearly";
+
+  recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript.trim();
+    document.getElementById("message").value = transcript;
+    talkToDucky();  // Auto-submit
+  };
+
+  recognition.onerror = (event) => {
+    alert("Voice input error: " + event.error);
+    document.getElementById("message").placeholder = "Explain your problem here...";
+  };
+
+  recognition.onend = () => {
+    // If nothing was said, reset placeholder
+      const input = document.getElementById("message").value;
+      if (!input) {
+        document.getElementById("message").placeholder = "Explain your problem here...";
+      }
+    };
+
+  recognition.start();
+}
+
+  let history = [];
+
+  function escapeHTML(str) {
+    return str.replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;");
+  }
+
+  function formatDuckReply(text) {
+    // Simple Markdown-style code block support
+    const codeBlockRegex = /```(\w*)\n([\s\S]*?)```/g;
+
+    // Convert code blocks to <pre><code>
+    const formatted = text.replace(codeBlockRegex, (_, lang, code) => {
+      const escaped = escapeHTML(code.trim());
+      return `<pre><code class="language-${lang}">${escaped}</code></pre>`;
+    });
+
+    // Convert newlines to <br> for non-code parts
+    return "Ducky: " + formatted.replace(/\n/g, "<br>");
+  }
+
+  async function talkToDucky() {
+    const msg = document.getElementById('message').value.trim();
+    const mode = document.getElementById('mode').value;
+    const chat = document.getElementById('chat');
+
+    if (!msg) return;
+
+    const userMsg = document.createElement("div");
+    userMsg.className = "chat-msg user-msg";
+    userMsg.textContent = "You: " + msg;
+    chat.appendChild(userMsg);
+
+    const response = await fetch("http://127.0.0.1:8000/talk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: msg,
+        mode: mode,
+        history: history
+      })
+    });
+
+    const data = await response.json();
+
+    const duckMsg = document.createElement("div");
+    duckMsg.className = "chat-msg duck-msg";
+    duckMsg.innerHTML = formatDuckReply(data.reply);
+    chat.appendChild(duckMsg);
+
+    history = data.history;
+    document.getElementById('message').value = "";
+    chat.scrollTop = chat.scrollHeight;
+  }
+  </script>
+
+</body>
+</html>
