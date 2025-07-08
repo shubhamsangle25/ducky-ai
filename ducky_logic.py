@@ -31,10 +31,10 @@ def parse_history(history):
     return converted
 
 
-def get_ducky_response(user_input, mode="thinker", history=None):
+def get_ducky_response(user_input, mode="rubber_duck", history=None):
     if history is None:
         history = []
-    system_prompt = MODE_PROMPTS.get(mode, MODE_PROMPTS["thinker"])
+    system_prompt = MODE_PROMPTS.get(mode, MODE_PROMPTS["rubber_duck"])
     msgs = [SystemMessage(content=system_prompt)] + parse_history(history)
     msgs.append(HumanMessage(content=user_input))
 
