@@ -168,7 +168,7 @@ button {
     userMsg.textContent = "You: " + msg;
     chat.appendChild(userMsg);
 
-    const response = await fetch("http://127.0.0.1:8000/talk", {
+    const response = await fetch("/talk", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
